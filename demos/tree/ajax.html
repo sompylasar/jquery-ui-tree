@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>jQuery UI Tree - AJAX functionality</title>
+	<link type="text/css" href="../../themes/base/jquery-ui.css" rel="stylesheet" />
+	<link type="text/css" href="../../themes/base/jquery.ui.tree.css" rel="stylesheet" />
+	<script type="text/javascript" src="../../jquery-1.4.4.js"></script>
+	<script type="text/javascript" src="../../ui/jquery-ui.js"></script>
+	<script type="text/javascript" src="../../ui/jquery.ui.tree.js"></script>
+	<link type="text/css" href="../demos.css" rel="stylesheet" />
+	<link type="text/css" href="./icons.css" rel="stylesheet" />
+	<style type="text/css">
+	.demo .tree {
+		float: left;
+		width: 40%;
+		margin-right: 1em;
+	}
+	</style>
+	<script type="text/javascript" src="http://jqueryui.com/themeroller/themeswitchertool/"></script>
+	<script type="text/javascript">
+	jQuery(function($) {
+		var $tree = $("#tree-ajax").tree({
+			ajaxOptions: {
+				url: './jquery-ui-tree-demo.json',
+				type: 'get'
+			},
+			ajaxRequestParams: {
+				id: '#{id}'
+			}
+		}).bind('ui-tree-' + 'node-load-error', function (event, eventArgs) {
+			var $tree = $(event.target), $node = eventArgs.node, $nodeHeader = $tree.tree('getNodeHeader', $node),
+				exception = eventArgs.exception;
+			$('<li/>')
+				.append($('<div/>').text('#'+$tree.attr('id') + ($nodeHeader.length ? '/' + $nodeHeader.text() : '') + '> ' + event.type + ': '
+					+'exception: "'+(exception ? exception.message || exception : '')+'", '
+					+'errorText: "'+(eventArgs.errorText)+'"'))
+				.prependTo('#events-log');
+		});
+		
+		var log = function (event, eventArgs) {
+			var $tree = $(event.target), $node = eventArgs.node, $nodeHeader = $tree.tree('getNodeHeader', $node),
+				calls = [];
+			//$.each(event && event.originalEvent ? event.originalEvent.ui_tree || [] : [], function () { calls[calls.length] = this.method; });
+			$('<li/>')
+				.append($('<div/>').text('#'+$tree.attr('id') + ($nodeHeader.length ? '/' + $nodeHeader.text() : '') + '> ' + event.type + ''))
+				//.append($('<div/>').text(''+calls.join('; ')))
+				.prependTo('#events-log');
+		};
+		$.each([ 'node-before-insert', 'node-inserted', 'node-before-remove', 'node-removed', 
+				 'node-before-expand', 'node-expanded', 'node-before-collapse', 'node-collapsed', 
+				 'node-before-load', 'node-load-started', 'node-load-success', 'node-load-error', 'node-load-complete', 
+				 'node-click', 
+				 'node-before-select', 'node-selected', 'node-before-deselect', 'node-deselected', 
+				 'node-before-enable', 'node-enabled', 'node-before-disable', 'node-disabled', 
+				 'node-before-hide', 'node-hidden', 'node-before-show', 'node-shown'
+				], function (i, val) {
+					$tree.bind('ui-tree-' + val, log);
+				});
+				
+		var $switcher = $('#switcher'); 
+		if ($switcher.themeswitcher) 
+			$switcher.themeswitcher().before('<p>Switch themes using ThemeSwitcher:</p>'); 
+		else 
+			$switcher.html('ThemeSwitcher not available.').addClass('ui-widget-content ui-state-error');
+	});
+	</script>
+</head>
+<body style="font-size:62.5%;">
+
+<div class="demo">
+	<div class="tree" id="tree-ajax">
+		<div><span>jQuery UI Tree (ajax)</span></div>
+		<ul>
+		</ul>
+	</div>
+	<div style="clear:both"></div>
+</div><!-- End demo -->
+
+<div class="demo-description">
+	<p>AJAX functionallity is triggered on by specifying <em>ajaxOptions.url</em> in the <em>options</em> hash.
+	The nodes provided at the URL will automatically be loaded into the tree root after the tree is constructed. 
+	Other nodes marked as 'remote' will load their children from the same URL on expand. 
+	Additional request parameters may be defined via <em>options.ajaxRequestParams</em>; each value may be a template using the following variables: 
+	<em>#{id}</em> - the current node identifier, <em>#{text}</em> - its text and <em>#{title}</em> - its tooltip.
+	The URL and other AJAX parameters may be altered in <em>node-before-load</em> event handler: properties of <em>eventArgs.ajaxOptions</em> hash may be changed.
+	</p>
+	<p>See example code in the page source and <a href="./jquery-ui-tree-demo.json" target="_blank">the JSON structure</a>.</p>
+	<p>Collapse/expand nodes to see the different usage of <em>cache</em> and <em>hascached</em> attributes.</p>
+	<p><strong>Warning:</strong> node <em>id</em>s <strong>must</strong> be unique (non-unique ids cause the tree to behave buggy on node insertion).</p>
+	<div id="switcher"></div>
+</div><!-- End demo-description -->
+
+<div class="demo-description">
+	<p>Events log:</p>
+	<ul id="events-log">
+	</ul>
+</div><!-- End demo-description -->
+
+</body>
+</html>

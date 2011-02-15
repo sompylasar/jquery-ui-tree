@@ -1,0 +1,26 @@
+[
+	{ 
+		"id": "", "text": "Local node", "children": [
+			{ "id": "", "text": "Local node child 1" },
+			{ "id": "", "text": "Local node child 2: jqueryui.com (no target specified)", "attrs": { "href": "http://jqueryui.com" } },
+			{ "id": "", "text": "Local node child 3: jqueryui.com (target: \"\")", "attrs": { "href": "http://jqueryui.com", "target": "" } }
+		], 
+		"attrs": { "remote": false, "collapsed": false }
+	},
+	{ 
+		"id": "", "text": "Remote node - use cache",
+		"attrs": { "remote": true, "cache": true, "hascached": false, "collapsed": true }
+	},
+	{ 
+		"id": "", "text": "Remote node - don't use cache",
+		"attrs": { "remote": true, "cache": false, "hascached": false, "collapsed": true }
+	},
+	{ 
+		"id": "", "text": "Remote node - don't use cache, has preloaded children", "children": [
+			{ "id": "", "text": "Remote node preloaded child 1" },
+			{ "id": "", "text": "Remote node preloaded child 2" },
+			{ "id": "", "text": "Remote node preloaded child 3: jqueryui.com (target: \"_blank\")", "attrs": { "href": "http://jqueryui.com", "target": "_blank" } }
+		], 
+		"attrs": { "remote": true, "cache": false, "hascached": true, "collapsed": false }
+	}
+]

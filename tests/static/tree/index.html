@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+	<title>Tree Static Test : Default</title>
+	<link rel="stylesheet" href="../static.css" type="text/css" />
+	<link type="text/css" href="../../../themes/base/jquery-ui.css" rel="stylesheet" />
+	<link type="text/css" href="../../../themes/base/jquery.ui.tree.css" rel="stylesheet" />
+	<script type="text/javascript" src="../../../jquery-1.4.4.js"></script>
+	<script type="text/javascript" src="../static.js"></script>
+</head>
+<body>
+
+<div class="ui-widget ui-widget-content ui-tree">
+	<div class="ui-widget-header ui-tree-header"><span>jQuery UI Tree</span></div>
+	<ul class="ui-tree-root">
+		<li class="ui-tree-node ui-tree-node-first-visible"><div class="ui-tree-node-header ui-tree-node-first-visible"><a href="#"><span class="ui-tree-node-text ui-state-default">Node 1</span></a></div></li>
+		<li class="ui-tree-node"><div class="ui-tree-node-header"><a href="#content"><span class="ui-tree-node-text ui-state-default">Node 2</span></a></div></li>
+		<li class="ui-tree-node ui-tree-node-last-visible"><div class="ui-tree-node-header ui-tree-node-last-visible"><a href="javascript:void(0)"><span class="ui-tree-node-text ui-state-default">Node 3 with children</span></a></div>
+			<ul class="ui-tree-children">
+				<li class="ui-tree-node ui-tree-node-first-visible"><div class="ui-tree-node-header ui-tree-node-first-visible"><a><span class="ui-tree-node-text ui-state-default">Node 3-1</span></a></div></li>
+				<li class="ui-tree-node"><div class="ui-tree-node-header"><a><span class="ui-tree-node-text ui-state-default">Node 3-2 with children</span></a></div>
+					<ul class="ui-tree-children">
+						<li class="ui-tree-node ui-tree-node-first-visible"><div class="ui-tree-node-header ui-tree-node-first-visible"><a><span class="ui-tree-node-text ui-state-default">Node 3-2-1</span></a></div></li>
+						<li class="ui-tree-node"><div class="ui-tree-node-header"><a><span class="ui-tree-node-text ui-state-default">Node 3-2-2</span></a></div></li>
+						<li class="ui-tree-node ui-tree-node-last-visible"><div class="ui-tree-node-header ui-tree-node-last-visible"><a><span class="ui-tree-node-text ui-state-default">Node 3-2-3</span></a></div></li>
+					</ul>
+				</li>
+				<li class="ui-tree-node ui-tree-node-last-visible"><div class="ui-tree-node-header ui-tree-node-last-visible"><a href="http://jqueryui.com/" target="_blank"><span class="ui-tree-node-text ui-state-default">Node 3-3: jqueryui.com</span></a></div></li>
+			</ul>
+		</li>
+	</ul>
+</div>
+
+</body>
+</html>

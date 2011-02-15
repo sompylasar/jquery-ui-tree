@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>jQuery UI Tree - Default functionality</title>
+	<link type="text/css" href="../../themes/base/jquery-ui.css" rel="stylesheet" />
+	<link type="text/css" href="../../themes/base/jquery.ui.tree.css" rel="stylesheet" />
+	<script type="text/javascript" src="../../jquery-1.4.4.js"></script>
+	<script type="text/javascript" src="../../ui/jquery-ui.js"></script>
+	<script type="text/javascript" src="../../ui/jquery.ui.tree.js"></script>
+	<link type="text/css" href="../demos.css" rel="stylesheet" />
+	<link type="text/css" href="./icons.css" rel="stylesheet" />
+	<style type="text/css">
+	.demo .tree {
+		float: left;
+		width: 40%;
+		margin-right: 1em;
+	}
+	</style>
+	<script type="text/javascript" src="http://jqueryui.com/themeroller/themeswitchertool/"></script>
+	<script type="text/javascript">
+	jQuery(function($) {
+		var $trees = $("#tree-single").tree().add( $("#tree-multiple").tree({ selectMultiple: true }) );
+		
+		var log = function (event, eventArgs) {
+			var $tree = $(event.target), $node = eventArgs.node, $nodeHeader = $tree.tree('getNodeHeader', $node),
+				$selected = $tree.tree('getSelectedNodes'), selected_str = [],
+				calls = [];
+			$selected.each(function () {  selected_str[selected_str.length] = $tree.tree('getNodeHeader', this).text();  });
+			//$.each(event && event.originalEvent ? event.originalEvent.ui_tree || [] : [], function () { calls[calls.length] = this.method; });
+			$('<li/>')
+				.append($('<div/>').text('#'+$tree.attr('id') + ($nodeHeader.length ? '/' + $nodeHeader.text() : '') + '> ' + event.type + ': getSelectedNodes=>[' + selected_str.join(', ') + ']'))
+				//.append($('<div/>').text(''+calls.join('; ')))
+				.prependTo('#events-log');
+		};
+		$.each([ 'node-before-insert', 'node-inserted', 'node-before-remove', 'node-removed', 
+				 'node-before-expand', 'node-expanded', 'node-before-collapse', 'node-collapsed', 
+				 'node-before-load', 'node-load-started', 'node-load-success', 'node-load-error', 'node-load-complete', 
+				 'node-click', 
+				 'node-before-select', 'node-selected', 'node-before-deselect', 'node-deselected', 
+				 'node-before-enable', 'node-enabled', 'node-before-disable', 'node-disabled', 
+				 'node-before-hide', 'node-hidden', 'node-before-show', 'node-shown'
+				], function (i, val) {
+					$trees.bind('ui-tree-' + val, log);
+				});
+				
+		$("#tree-single").tree('insertNode', { id: '2', text: 'Dynamically added node' }, 'append', '1');
+		
+		$trees.bind('ui-tree-node-click', function (event, eventArgs) {
+			if (eventArgs.node.is('.ui-tree-node-click-cancelled')) {
+				return false;
+			}
+		});
+		
+		var $switcher = $('#switcher'); 
+		if ($switcher.themeswitcher) 
+			$switcher.themeswitcher().before('<p>Switch themes using ThemeSwitcher:</p>'); 
+		else 
+			$switcher.html('ThemeSwitcher not available.').addClass('ui-widget-content ui-state-error');
+	});
+	</script>
+</head>
+<body style="font-size:62.5%;">
+
+<div class="demo">
+	<div class="tree" id="tree-single">
+		<div><span>jQuery UI Tree (single selection)</span></div>
+		<ul>
+			<li id="tree-single-node-1"><div><a href="#"><span>Node 1</span></a></div></li>
+			<li><div><a href="#content"><span>Node 2</span></a></div></li>
+			<li><div><a href="javascript:void(0)"><span>Node 3 with children</span></a></div>
+				<ul>
+					<li><div><a><span>Node 3-1</span></a></div></li>
+					<li><div><a><span>Node 3-2 with children</span></a></div>
+						<ul>
+							<li><div><a><span>Node 3-2-1</span></a></div></li>
+							<li><div><a><span>Node 3-2-2</span></a></div></li>
+							<li><div><a><span>Node 3-2-3</span></a></div></li>
+						</ul>
+					</li>
+					<li><div><a href="http://jqueryui.com/" target="_blank"><span>Node 3-3: jqueryui.com</span></a></div></li>
+				</ul>
+			</li>
+		</ul>
+	</div>
+	<div class="tree" id="tree-multiple">
+		<div><span>jQuery UI Tree (multiple selection)</span></div>
+		<ul>
+			<li><div><a href="#"><span>Node 1</span></a></div></li>
+			<li class="ui-tree-node-click-cancelled"><div><a href="#content"><span>Node 2 (node-click event is cancelled)</span></a></div></li>
+			<li><div><a href="javascript:void(0)"><span>Node 3 with children</span></a></div>
+				<ul>
+					<li><div><a><span>Node 3-1</span></a></div></li>
+					<li><div><a><span>Node 3-2 with children</span></a></div>
+						<ul>
+							<li><div><a><span>Node 3-2-1</span></a></div></li>
+							<li><div><a><span>Node 3-2-2</span></a></div></li>
+							<li><div><a><span>Node 3-2-3</span></a></div></li>
+						</ul>
+					</li>
+					<li><div><a href="http://jqueryui.com/" target="_blank"><span>Node 3-3: jqueryui.com</span></a></div></li>
+				</ul>
+			</li>
+		</ul>
+	</div>
+	<div style="clear:both"></div>
+</div><!-- End demo -->
+
+<div class="demo-description">
+	<p>Navigate through the tree.</p>
+	<div id="switcher"></div>
+</div><!-- End demo-description -->
+
+<div class="demo-description">
+	<p>Events log:</p>
+	<ul id="events-log">
+	</ul>
+</div><!-- End demo-description -->
+
+</body>
+</html>

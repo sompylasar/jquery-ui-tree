@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>Tree Visual Test : Default</title>
+	<link rel="stylesheet" href="../visual.css" type="text/css" />
+	<link type="text/css" href="../../../themes/base/jquery-ui.css" rel="stylesheet" />
+	<link type="text/css" href="../../../themes/base/jquery.ui.tree.css" rel="stylesheet" />
+	<script type="text/javascript" src="../../../jquery-1.4.4.js"></script>
+	<script type="text/javascript" src="../../../ui/jquery-ui.js"></script>
+	<script type="text/javascript" src="../../../ui/jquery.ui.tree.js"></script>
+	<script type="text/javascript">
+	$(function() {
+		$("#tree").tree();
+	});
+	</script>
+</head>
+<body>
+
+<div id="tree">
+	<div><span>jQuery UI Tree</span></div>
+	<ul>
+		<li><div><a href="#"><span>Node 1</span></a></div></li>
+		<li><div><a href="#content"><span>Node 2</span></a></div></li>
+		<li><div><a href="javascript:void(0)"><span>Node 3 with children</span></a></div>
+			<ul>
+				<li><div><a><span>Node 3-1</span></a></div></li>
+				<li><div><a><span>Node 3-2 with children</span></a></div>
+					<ul>
+						<li><div><a><span>Node 3-2-1</span></a></div></li>
+						<li><div><a><span>Node 3-2-2</span></a></div></li>
+						<li><div><a><span>Node 3-2-3</span></a></div></li>
+					</ul>
+				</li>
+				<li><div><a href="http://jqueryui.com/" target="_blank"><span>Node 3-3: jqueryui.com</span></a></div></li>
+			</ul>
+		</li>
+	</ul>
+</div>
+
+</body>
+</html>

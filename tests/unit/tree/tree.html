@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>jQuery UI Tree Test Suite</title>
+
+	<link type="text/css" href="../../../themes/base/jquery-ui.css" rel="stylesheet" />
+	<link type="text/css" href="../../../themes/base/jquery.ui.tree.css" rel="stylesheet" />
+	<script type="text/javascript" src="../../../jquery-1.4.4.js"></script>
+	<script type="text/javascript" src="../../../ui/jquery-ui.js"></script>
+	<script type="text/javascript" src="../../../ui/jquery.ui.tree.js"></script>
+	
+	<link rel="stylesheet" href="../../../external/qunit.css" type="text/css"/>
+	<script type="text/javascript" src="../../../external/qunit.js"></script>
+	<script type="text/javascript" src="../../jquery.simulate.js"></script>
+	<script type="text/javascript" src="../testsuite.js"></script>
+
+	<script type="text/javascript" src="tree_core.js"></script>
+	<script type="text/javascript" src="tree_defaults.js"></script>
+	<script type="text/javascript" src="tree_events.js"></script>
+	<script type="text/javascript" src="tree_methods.js"></script>
+	<script type="text/javascript" src="tree_options.js"></script>
+	<script type="text/javascript" src="tree_tickets.js"></script>
+</head>
+<body>
+
+<h1 id="qunit-header">jQuery UI Tree Test Suite</h1>
+<h2 id="qunit-banner"></h2>
+<h2 id="qunit-userAgent"></h2>
+<ol id="qunit-tests">
+</ol>
+
+<div id="main" style="position: absolute; top: -10000px; left: -10000px;">
+	
+<div id="tree">
+	<div><span>jQuery UI Tree</span></div>
+	<ul>
+		<li id="tree-node-1"><div><a href="#"><span>Node 1</span></a></div></li>
+		<li><div><a href="#content"><span>Node 2</span></a></div></li>
+		<li><div><a href="javascript:void(0)"><span>Node 3 with children</span></a></div>
+			<ul>
+				<li><div><a><span>Node 3-1</span></a></div></li>
+				<li><div><a><span>Node 3-2 with children</span></a></div>
+					<ul>
+						<li><div><a><span>Node 3-2-1</span></a></div></li>
+						<li><div><a><span>Node 3-2-2</span></a></div></li>
+						<li><div><a><span>Node 3-2-3</span></a></div></li>
+					</ul>
+				</li>
+				<li><div><a href="http://jqueryui.com/" target="_blank"><span>Node 3-3: jqueryui.com</span></a></div></li>
+			</ul>
+		</li>
+	</ul>
+</div>
+	
+</div>
+
+</body>
+</html>

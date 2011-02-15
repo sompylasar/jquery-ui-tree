@@ -1,0 +1,9 @@
+.ui-tree .ui-tree-node-header a {
+	/*min-height: 20px;
+	line-height: 18px;*/
+}
+.ui-tree .ui-tree-node-header a span {
+	/*min-height: 20px;
+	padding-left: 20px;
+	background-image: url("./images/accept_green.png"); conflicts with ThemeRoller background*/
+}
