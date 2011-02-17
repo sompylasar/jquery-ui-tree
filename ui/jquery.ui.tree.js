@@ -58,42 +58,61 @@
  
 	// Note: below are private functions that were pulled out to avoid recreating them for each instance of the widget
 	
-	var getHeader = function (node) {
-		return $('> div:eq(0)', node);
+	var getFirstChildElement = function (element, tagName) {
+		var firstChild = (element ? element.firstChild : null);
+		while (firstChild && (firstChild.nodeType != 1 || (!tagName || firstChild.tagName != tagName))) {
+			firstChild = firstChild.nextSibling;
+		}
+		return firstChild;
 	};
-	var getHeaderAndNode = function (node) {
-	    return getHeader(node).add(node);
+	var getHeader = function ($node) {
+		var nodeElement = $node[0],
+			$header = ($node.length > 1 ? $node.children('div:eq(0)') : $(getFirstChildElement(nodeElement, 'DIV') || []));
+		return $header;
+		//return $node.children('div').eq(0);
 	};
-	var getAnchor = function (node) {
-		return getHeader(node).children('a:eq(0)');
+	var getHeaderAndNode = function ($node) {
+		var nodeElement = $node[0], headerElement,
+			$pair = ($node.length > 1 
+				? $node.add(getHeader($node)) 
+				: $(nodeElement ? ((headerElement = getFirstChildElement(nodeElement, 'DIV')) ? [ nodeElement, headerElement ] : nodeElement) : []));
+		return $pair;
+		//return $node.add(getHeader($node));
 	};
-	var getChildren = function (node) {
-		return $('ul:eq(0)', node).children('li.'+uiTreeClasses.node);
+	var getAnchor = function ($node, $header) {
+		var $header = ($header ? $header : getHeader($node)), headerElement = $header[0],
+			$anchor = ($header.length > 1 ? $header.children('a:eq(0)') : $(getFirstChildElement(headerElement, 'A') || []));
+		return $anchor;
+		//return ($header ? $header : getHeader($node)).children('a').eq(0);
 	};
-	var countChildren = function (node) {
-		return getChildren(node).length;
+	var getChildNodesList = function ($node) {
+		var nodeElement = $node[0], 
+			$ul = ($node.length > 1 ? $node.children('ul:eq(0)') : $(getFirstChildElement(nodeElement, 'UL') || []));
+		return $ul;
+		//return $node.children('ul').eq(0);
 	};
-	var getDepth = function (node, tree) {
-		node = $(node).get(0);
-		tree = $(tree).get(0);
-		if (!node || !tree) return -1;
+	var getChildren = function ($node) {
+		return getChildNodesList($node).children('li.'+uiTreeClasses.node);
+	};
+	var getDepth = function (nodeElement, treeElement) {
+		if (!nodeElement || !treeElement) return -1;
 		
-		if (node === tree)
+		if (nodeElement === treeElement)
 			return 0;
 		
 		var found_root = false;
 		var depth = 1;
-		while (node.parentNode && node.parentNode.tagName) {
-			if (node.parentNode == tree) found_root = true;
-			if (node.parentNode.tagName.toUpperCase() == 'LI')
+		while (nodeElement.parentNode && nodeElement.parentNode.tagName) {
+			if (nodeElement.parentNode == treeElement) found_root = true;
+			if (nodeElement.parentNode.tagName.toUpperCase() == 'LI')
 				++depth;
-			node = node.parentNode;
+			nodeElement = nodeElement.parentNode;
 		}
 		
 		return (found_root ? depth : -1);
 	};
-	var belongsTo = function (node, tree) {
-		var depth = getDepth(node, tree);
+	var belongsTo = function (nodeElement, treeElement) {
+		var depth = getDepth(nodeElement, treeElement);
 		return (depth > 0);
 	};
 	
@@ -159,94 +178,102 @@
 		};
 	};
 	
-	var nodeAttr = function (widget, node, attrName, attrValue) {
-		var $node = $(node);
-		return $node.attr(widget.options.nodeAttributePrefix + attrName, attrValue);
+	var nodeAttr = function (widget, nodeElement, attrName, attrValue) {
+		if (!nodeElement) return;
+		return $.data(nodeElement, widget.options.nodeAttributePrefix + attrName, attrValue);
 	};
-	var nodeAttrRemove = function (widget, node, attrName) {
-		var $node = $(node);
-		return $node.removeAttr(widget.options.nodeAttributePrefix + attrName);
+	var nodeAttrRemove = function (widget, nodeElement, attrName) {
+		if (!nodeElement) return;
+		return $.removeData(nodeElement, widget.options.nodeAttributePrefix + attrName);
 	};
 	var attrIsTrue = function (attrName, attrValue) {
 		attrValue = $.trim('' + attrValue);
 		return (attrValue == attrName || attrValue == 'true');
 	};
-	var nodeAttrIsTrue = function (widget, node, attrName) {
-		var attrValue = nodeAttr(widget, node, attrName);
+	var nodeAttrIsTrue = function (widget, nodeElement, attrName) {
+		var attrValue = nodeAttr(widget, nodeElement, attrName);
 		return attrIsTrue(attrName, attrValue);
 	};
-	var nodeAttrSetTrue = function (widget, node, attrName) {
-		return nodeAttr(widget, node, attrName, attrName);
+	var nodeAttrSetTrue = function (widget, nodeElement, attrName) {
+		return nodeAttr(widget, nodeElement, attrName, attrName);
 	};
-	var nodeAttrSetFalse = function (widget, node, attrName) {
-		return nodeAttr(widget, node, attrName, '');
+	var nodeAttrSetFalse = function (widget, nodeElement, attrName) {
+		return nodeAttr(widget, nodeElement, attrName, '');
 	};
 	
-	var updateTitle = function (widget, nodes) {
-		var self = widget, o = widget.options;
+	var updateTitle = function (widget, $node) {
+		var self = widget, o = widget.options,
+			nodeElement = $node[0],
+			$anchor = getAnchor($node)/*,
+			$span = $anchor.children('span') */;
 		
-		$(nodes).each(function () {
-			var $node = $(this);
-			var $anchor = getAnchor($node);
-			var $span = $anchor.find('span').eq(0);
+		$anchor.attr('rel', nodeAttr(self, nodeElement, 'rel') || '');
+		
+		var title = (nodeAttr(self, nodeElement, 'title') || emptyTitle)
+			, spanTitle
+			//, spanText = $span.text().replace('\"','&quot;')
+			, errorText = (nodeAttr(self, nodeElement, 'error') || '?')
+			, t
+			, setTitleAttr = function (t) {
+				if (typeof t == 'undefined') {
+					if ($.browser.opera || $.browser.mozilla) {
+						$anchor.removeAttr('title'); //< HACK: Opera and Mozilla display empty tooltip instead of displaying nothing.
+					}
+				}
+				else {
+					$anchor.attr('title', t);
+				}
+			};
+		
+		if ( $node.hasClass(uiTreeClasses.nodeDisabled) ) {
+			var disabledTitle = nodeAttr(self, nodeElement, 'disabledTitle');
 			
-			$anchor.attr('rel', nodeAttr(self, $node, 'rel') || '');
+			t = emptyTitle;
+			//setTitleAttr(t);
 			
-			var title = (nodeAttr(self, $node, 'title') || emptyTitle)
-				, spanTitle
-				, spanText = $span.text().replace('\"','&quot;')
-				, errorText = (nodeAttr(self, $node, 'error') || '?')
-				, t;
+			spanTitle = (disabledTitle === false ? emptyTitle : typeof disabledTitle == 'string' ? disabledTitle : title);
+		}
+		else {
+			t = ($node.hasClass(uiTreeClasses.nodeEmpty) 
+					? emptyTitle 
+					: ($node.hasClass(uiTreeClasses.nodeLoading)
+						? o.loadingTitle
+						: ($node.hasClass(uiTreeClasses.nodeCollapsed) 
+							? o.expandTitle 
+							: o.collapseTitle))) || emptyTitle;
+			//setTitleAttr(t);
 			
-			if ( $node.hasClass(uiTreeClasses.nodeDisabled) ) {
-				var disabledTitle = nodeAttr(self, $node, 'disabledTitle');
-				
-				t = emptyTitle;
-				(t == undefined ? $anchor.removeAttr('title') : $anchor.attr('title', t));
-				
-				spanTitle = (disabledTitle === false ? emptyTitle : typeof disabledTitle == 'string' ? disabledTitle : title);
-			}
-			else {
-				t = ($node.hasClass(uiTreeClasses.nodeEmpty) 
-						? emptyTitle 
-						: ($node.hasClass(uiTreeClasses.nodeLoading)
-							? o.loadingTitle
-							: ($node.hasClass(uiTreeClasses.nodeCollapsed) 
-								? o.expandTitle 
-								: o.collapseTitle))) || emptyTitle;
-				(t == undefined ? $anchor.removeAttr('title') : $anchor.attr('title', t));
-				
-				spanTitle = title;
-			}
-			
-			t = ($node.hasClass(uiTreeClasses.nodeError)  &&  o.errorTitleTemplate
-					? $.trim(o.errorTitleTemplate.replace(/#\{title\}/g, spanTitle).replace(/#\{error\}/g, errorText))
-					: spanTitle) || emptyTitle;
-			//(t == undefined ? $span.attr('title', spanText) : $span.attr('title', t));
-			(t == undefined ? $span.removeAttr('title') : $span.attr('title', t));
-		});
+			spanTitle = title;
+		}
+		
+		t = ($node.hasClass(uiTreeClasses.nodeError)  &&  o.errorTitleTemplate
+				? $.trim(o.errorTitleTemplate.replace(/#\{title\}/g, spanTitle).replace(/#\{error\}/g, errorText))
+				: spanTitle) || emptyTitle;
+		//(t == undefined ? $span.attr('title', spanText) : $span.attr('title', t));
+		setTitleAttr(t);
 	};
 	
 	// forward declarations:
 	var startLoadChildNodes /* function (widget, nodes [, onSuccess[, onError [, originalEvent]]]) */, 
 		cancelLoadChildNodes /* function (widget, nodes[, originalEvent]) */;
 	
-	var expandRecursive = function (widget, nodes, expandDepth, originalEvent) {
+	var expandRecursive = function (widget, $nodes, expandDepth, originalEvent) {
 		var self = widget, o = widget.options;
 		
-		$(nodes).each( function () {
-			var $node = $(this);
+		$nodes.each( function () {
+			var nodeElement = this,
+				$node = $(nodeElement);
 			
-			if (getDepth($node, self.element) >= expandDepth) return;
+			if (getDepth(nodeElement, self.element[0]) >= expandDepth) return;
 			
 			if ($node.hasClass(uiTreeClasses.nodeLoading) /*|| $node.hasClass(uiTreeClasses.nodeDisabled)*/)
 				return;
 			
-			var collapsed = nodeAttrIsTrue(self, $node, 'collapsed'),
+			var collapsed = nodeAttrIsTrue(self, nodeElement, 'collapsed'),
 			    notify = ( $node.hasClass(uiTreeClasses.nodeCollapsed) ),
-			    remote = nodeAttrIsTrue(self, $node, 'remote'),
-			    usecache = nodeAttrIsTrue(self, $node, 'cache'),
-			    hascached = nodeAttrIsTrue(self, $node, 'hascached'),
+			    remote = nodeAttrIsTrue(self, nodeElement, 'remote'),
+			    usecache = nodeAttrIsTrue(self, nodeElement, 'cache'),
+			    hascached = nodeAttrIsTrue(self, nodeElement, 'hascached'),
 			    finished = function () {
 			        getHeaderAndNode($node)
 			            .removeClass(uiTreeClasses.nodeLoading);
@@ -258,7 +285,7 @@
 			        if (notify && false === self._trigger('node-before-expand', originalEvent, createNodeEventArgs(self, $node)))
 				        return;
 				    
-				    nodeAttrSetFalse(self, $node, 'collapsed');
+				    nodeAttrSetFalse(self, nodeElement, 'collapsed');
 				    getHeaderAndNode($node)
 					    .removeClass(uiTreeClasses.nodeCollapsed);
 				    updateTitle(self, $node);
@@ -292,11 +319,12 @@
 	};
 	
 	var handleNodeLoadStart = function (widget, $node, ajaxOptions, httpRequest, originalEvent) {
-		var self = widget/*, o = widget.options*/;
+		var self = widget/*, o = widget.options*/,
+			nodeElement = $node[0];
 		
 		// Note: node-before-load event (cancellable) is triggered in startLoadChildNodes
 		
-		nodeAttrRemove(self, $node, 'error');				
+		nodeAttrRemove(self, nodeElement, 'error');				
 		getHeaderAndNode($node)
 			.removeClass(uiTreeClasses.nodeError)
 			.addClass(uiTreeClasses.nodeLoading);
@@ -313,7 +341,7 @@
 		self._trigger('node-load-started', originalEvent, createNodeEventArgs(self, $node));
 	};
 	var handleNodeLoadSuccess = function (widget, $node, ajaxOptions, httpRequest, originalEvent) {
-		var self = widget, o = widget.options;
+		var self = widget/*, o = widget.options*/;
 		
 		getHeaderAndNode($node).removeClass(uiTreeClasses.nodeLoading);
 		updateTitle(self, $node);
@@ -322,7 +350,8 @@
 		self._trigger('node-load-complete', originalEvent, $.extend(createNodeLoadEventArgs(self, $node, ajaxOptions, httpRequest), { success: true }));
 	};
 	var handleNodeLoadError = function (widget, $node, ajaxOptions, httpRequest, status, exception, originalEvent) {
-		var self = widget, o = widget.options;
+		var self = widget, o = widget.options,
+			nodeElement = $node[0];
 		
 		status = status || 'error';
 		var errorText = o.errorTextTemplate
@@ -335,7 +364,7 @@
 		
 		self.collapseNode($node, originalEvent);
 		
-		nodeAttr(self, $node, 'error', errorText);
+		nodeAttr(self, nodeElement, 'error', errorText);
 		getHeaderAndNode($node).addClass(uiTreeClasses.nodeError);
 		updateTitle(self, $node);
 		
@@ -372,30 +401,27 @@
 		});
 	};
 	
-	var extendNodeList /* function (widget, node, nodeList, originalEvent) */; // forward declaration
-	var extendNode = function (widget, nodes, originalEvent) {
+	var extendNodeList /* function (widget, $node, $list, originalEvent) */; // forward declaration
+	var extendNode = function (widget, $nodes, originalEvent) {
 		var self = widget, o = widget.options;
 		
-		$(nodes).each(function () {
-			var is_new = false;
+		$nodes.each(function () {
+			var is_new = false,
+				nodeElement = this,
+				$node = $(nodeElement),
+				$list = getChildNodesList($node),
+				$header = getHeader($node),
+				$anchor = getAnchor($node, $header),
+				$span = $anchor.children('span:first');
 			
-			var $node = $(this);
-			var $list = $node.find('ul:eq(0)');
-			var $header = getHeader($node);
-			var $anchor = getAnchor($node);
-			var $span = $anchor.find('span:eq(0)');
-			
-			var title = nodeAttr(self, $node, 'title');
+			var title = nodeAttr(self, nodeElement, 'title');
 			if (!$node.hasClass(uiTreeClasses.node)) { // not previously extended node
 				is_new = true;
 				
 				if (!title) {
 					var native_title = $anchor.attr('title') || $node.attr('title');
 					
-					$anchor.removeAttr('title');
-					$node.removeAttr('title');
-					
-					nodeAttr(self, $node, 'title', native_title);
+					nodeAttr(self, nodeElement, 'title', native_title);
 				}
 				
 				if ($node.hasClass(uiTreeClasses.nodeHidden))
@@ -408,53 +434,63 @@
 				$list = $('<ul/>').appendTo($node);
 			}
 			
-			var remote = (attrIsTrue('remote', $node.attr('remote')) || nodeAttrIsTrue(self, $node, 'remote'));
-			var collapsed = (attrIsTrue('collapsed', $node.attr('collapsed')) || nodeAttrIsTrue(self, $node, 'collapsed'));
-			var disabled = (attrIsTrue('disabled', $node.attr('disabled')) || nodeAttrIsTrue(self, $node, 'disabled'));
-			var hidden = (attrIsTrue('hidden', $node.attr('hidden')) || nodeAttrIsTrue(self, $node, 'hidden'));
-			var selected = (attrIsTrue('selected', $node.attr('selected')) || nodeAttrIsTrue(self, $node, 'selected'));
-			var usecache = (attrIsTrue('cache', $node.attr('cache')) || nodeAttrIsTrue(self, $node, 'cache'));
-			var hascached = (attrIsTrue('hascached', $node.attr('hascached')) || nodeAttrIsTrue(self, $node, 'hascached'));
-			$node.removeAttr('remote');
-			$node.removeAttr('collapsed');
-			$node.removeAttr('disabled');
-			$node.removeAttr('hidden');
-			$node.removeAttr('selected');
-			if (remote) nodeAttrSetTrue(self, $node, 'remote'); else nodeAttrRemove(self, $node, 'remote');
-			if (usecache) nodeAttrSetTrue(self, $node, 'cache'); else nodeAttrRemove(self, $node, 'cache');
-			if (hascached) nodeAttrSetTrue(self, $node, 'hascached'); else nodeAttrRemove(self, $node, 'hascached');
-			if (collapsed) nodeAttrSetTrue(self, $node, 'collapsed'); else nodeAttrRemove(self, $node, 'collapsed');
-			if (disabled) nodeAttrSetTrue(self, $node, 'disabled'); else nodeAttrRemove(self, $node, 'disabled');
-			if (hidden) nodeAttrSetTrue(self, $node, 'hidden'); else nodeAttrRemove(self, $node, 'hidden');
-			if (selected && !disabled && !hidden) nodeAttrSetTrue(self, $node, 'selected'); else nodeAttrRemove(self, $node, 'selected');
+			// TODO: use jQuery.metadata instead of attributes
+			var remote = (/*attrIsTrue('remote', $node.attr(self.options.nodeAttributePrefix + 'remote')) 
+							|| */ nodeAttrIsTrue(self, nodeElement, 'remote'));
+			var collapsed = (/*attrIsTrue('collapsed', $node.attr(self.options.nodeAttributePrefix + 'collapsed')) 
+							|| */ nodeAttrIsTrue(self, nodeElement, 'collapsed'));
+			var disabled = (/*attrIsTrue('disabled', $node.attr(self.options.nodeAttributePrefix + 'disabled')) 
+							|| */ nodeAttrIsTrue(self, nodeElement, 'disabled'));
+			var hidden = (/*attrIsTrue('hidden', $node.attr(self.options.nodeAttributePrefix + 'hidden')) 
+							|| */ nodeAttrIsTrue(self, nodeElement, 'hidden'));
+			var selected = (/*attrIsTrue('selected', $node.attr(self.options.nodeAttributePrefix + 'selected')) 
+							|| */ nodeAttrIsTrue(self, nodeElement, 'selected'));
+			var usecache = (/*attrIsTrue('cache', $node.attr(self.options.nodeAttributePrefix + 'cache')) 
+							|| */ nodeAttrIsTrue(self, nodeElement, 'cache'));
+			var hascached = (/*attrIsTrue('hascached', $node.attr(self.options.nodeAttributePrefix + 'hascached')) 
+							|| */ nodeAttrIsTrue(self, nodeElement, 'hascached'));
+			//$node.removeAttr(self.options.nodeAttributePrefix + 'remote');
+			//$node.removeAttr(self.options.nodeAttributePrefix + 'collapsed');
+			//$node.removeAttr(self.options.nodeAttributePrefix + 'disabled');
+			//$node.removeAttr(self.options.nodeAttributePrefix + 'hidden');
+			//$node.removeAttr(self.options.nodeAttributePrefix + 'selected');
+			if (remote) nodeAttrSetTrue(self, nodeElement, 'remote'); else nodeAttrSetFalse(self, nodeElement, 'remote');
+			if (usecache) nodeAttrSetTrue(self, nodeElement, 'cache'); else nodeAttrSetFalse(self, nodeElement, 'cache');
+			if (hascached) nodeAttrSetTrue(self, nodeElement, 'hascached'); else nodeAttrSetFalse(self, nodeElement, 'hascached');
+			if (collapsed) nodeAttrSetTrue(self, nodeElement, 'collapsed'); else nodeAttrSetFalse(self, nodeElement, 'collapsed');
+			if (disabled) nodeAttrSetTrue(self, nodeElement, 'disabled'); else nodeAttrSetFalse(self, nodeElement, 'disabled');
+			if (hidden) nodeAttrSetTrue(self, nodeElement, 'hidden'); else nodeAttrSetFalse(self, nodeElement, 'hidden');
+			if (selected && !disabled && !hidden) nodeAttrSetTrue(self, nodeElement, 'selected'); else nodeAttrSetFalse(self, nodeElement, 'selected');
 			
 			$header.addClass(uiTreeClasses.nodeHeader);
 			$span.addClass(uiTreeClasses.nodeText).addClass('ui-state-default');
 				//.disableSelection();
 			
-			$header.unbind('.ui-tree').bind('click' + '.ui-tree', function (event) {
-				if (event.target == $anchor[0]) {
-					self.toggleNode($node, event);
-				}
-				else if (event.target == $span[0]) {
-					var ret = self._trigger('node-click', event, createNodeEventArgs(self, $node));
-					self.selectNode($node, (o.selectMultiple && !!event.ctrlKey), event);
-					if (ret !== false && self.getSelectedNodes().length <= 1 && !event.ctrlKey) {
-						return;
+			if (is_new) {
+				$header.unbind('.ui-tree').bind('click' + '.ui-tree', function (event) {
+					if (event.target == $anchor[0]) {
+						self.toggleNode($node, event);
 					}
-				}
-				return false;
-			});
-			$anchor.unbind('.ui-tree').bind('click' + '.ui-tree', function (event) {
-			}).bind('mouseover' + '.ui-tree', function (event) {
-				$span.addClass('ui-state-hover');
-			}).bind('mouseout' + '.ui-tree', function (event) {
-				$span.removeClass('ui-state-hover');
-			});
+					else if (event.target == $span[0]) {
+						var ret = self._trigger('node-click', event, createNodeEventArgs(self, $node));
+						self.selectNode($node, (o.selectMultiple && !!event.ctrlKey), event);
+						if (ret !== false && self.getSelectedNodes().length <= 1 && !event.ctrlKey) {
+							return;
+						}
+					}
+					return false;
+				});
+				$anchor.unbind('.ui-tree').bind('click' + '.ui-tree', function (event) {
+				}).bind('mouseover' + '.ui-tree', function (event) {
+					$span.addClass('ui-state-hover');
+				}).bind('mouseout' + '.ui-tree', function (event) {
+					$span.removeClass('ui-state-hover');
+				});
+			}
 			
 			extendNodeList(self, $node, $list, originalEvent);
 			
-			if (nodeAttr(self, $node, 'error'))
+			if (nodeAttr(self, nodeElement, 'error'))
 				getHeaderAndNode($node).addClass(uiTreeClasses.nodeError);
 				
 			updateTitle(self, $node);
@@ -482,14 +518,13 @@
 			}
 		});
 	};
-	extendNodeList = function (widget, node, nodeList, originalEvent) {
-		var self = widget/*, o = widget.options*/;
+	extendNodeList = function (widget, $node, $list, originalEvent) {
+		var self = widget/*, o = widget.options*/,
+			nodeElement = $node[0],
+			$children;
 		
-		var $node = $(node), 
-			$list = (nodeList ? $(nodeList).eq(0) : $node.find('ul:eq(0)'));
-		$list.children().not('li:parent').remove(); // remove empty nodes (ui.tree node should always contain a header)
-		var $children = $list.children();
-		
+		$list.children().not('li:parent').remove(); //< remove empty nodes (ui.tree node should always contain a header)
+		$children = $list.children();
 		
 		$list.addClass(uiTreeClasses.nodeChildrenList);
 		if ($children.length > 0) {
@@ -497,15 +532,16 @@
 			
 			getHeaderAndNode($node).removeClass(uiTreeClasses.nodeEmpty);
 			
-			var $visible = $children.filter('.'+uiTreeClasses.node+':visible:not(.'+uiTreeClasses.nodeHidden+')');
-			var $first_visible = $visible.filter(':first');
-			var $last_visible = $visible.filter(':last');
+			var $visible = $children.filter('.'+uiTreeClasses.node+':not(.'+uiTreeClasses.nodeHidden+')');
+			var $first_visible = $visible.first();
+			var $last_visible = $visible.last();
 			
+			getHeaderAndNode($children).removeClass(uiTreeClasses.nodeFirstVisible).removeClass(uiTreeClasses.nodeLastVisible);
 			getHeaderAndNode($first_visible).addClass(uiTreeClasses.nodeFirstVisible);
 			getHeaderAndNode($last_visible).addClass(uiTreeClasses.nodeLastVisible);
 		}
 		else {
-			if (!nodeAttrIsTrue(self, $node, 'remote')) {
+			if (!nodeAttrIsTrue(self, nodeElement, 'remote')) {
 				getHeaderAndNode($node).addClass(uiTreeClasses.nodeEmpty);
 			}
 		}
@@ -538,8 +574,8 @@
 	};
 	var createNode = function (widget, id, text, attrs, data) {
 		var self = widget, o = widget.options,
-			node = document.createElement('LI'),
-			$node = $(node),
+			nodeElement = document.createElement('LI'),
+			$node = $(nodeElement),
 			header = document.createElement('DIV'),
 			header_anchor = document.createElement('A'),
 			header_span = document.createElement('SPAN'),
@@ -548,28 +584,28 @@
 			node_header_id = getNodeHeaderHtmlId(self, id);
 		
 		if (node_id) {
-			nodeAttr(self, node, 'id', id);
-			nodeAttr(self, node, 'htmlid', node_id);
-			node.setAttribute('id', node_id);
+			nodeAttr(self, nodeElement, 'id', id);
+			nodeAttr(self, nodeElement, 'htmlid', node_id);
+			nodeElement.setAttribute('id', node_id);
 		}
 		if (node_header_id) {
 			header.setAttribute('id', node_header_id);
 		}
 		text = '' + ($.isFunction(text) ? text.apply(null, [ id, attrs ]) : text);
-		nodeAttr(self, node, 'text', text);
+		nodeAttr(self, nodeElement, 'text', text);
 		
 		attrs = $.extend({}, o.attrs, attrs);
 		if (attrs) {
 			$.each(attrs, function (attrName, attrValue) {
 				if (!attrName || typeof attrName != 'string') return;
 				
-				if (attrValue != null) nodeAttr(self, node, attrName, attrValue);
+				if (attrValue != null) nodeAttr(self, nodeElement, attrName, attrValue);
 			});
 		}
 		
-		var href = nodeAttr(self, node, 'href'),
-			rel = nodeAttr(self, node, 'rel'),
-			target = nodeAttr(self, node, 'target');
+		var href = nodeAttr(self, nodeElement, 'href'),
+			rel = nodeAttr(self, nodeElement, 'rel'),
+			target = nodeAttr(self, nodeElement, 'target');
 		if (typeof href != 'undefined') {
 			header_anchor.setAttribute('href', href);
 		}
@@ -583,14 +619,14 @@
 		header_span.innerHTML = text;
 		header_anchor.appendChild(header_span);			
 		header.appendChild(header_anchor);			
-		node.appendChild(header);
-		node.appendChild(list);
+		nodeElement.appendChild(header);
+		nodeElement.appendChild(list);
 		
 		$node.css({ 'display': 'none' }); //< avoid FOUC
 			
 		$node.data('ui-tree-node-data', data); //< store arbitary data
 		
-		return (node);
+		return $node;
 	};
 	
 	var convertDataToJSON = function (data, dataType) {
@@ -618,17 +654,17 @@
 				self.removeNode( $('#' + node_id) );
 			}
 			
-			var node_el = createNode(self, node_context.id, node_context.text, node_context.attrs, node_context.data);
-			if (node_el && how) {
-				if (how.before) $(how.before).before(node_el);
-				else if (how.after) $(how.after).after(node_el);
-				else if (how.append) $(how.append).children('ul').eq(0).append(node_el);
-				else if (how.prepend) $(how.prepend).children('ul').eq(0).prepend(node_el);
+			var $node = createNode(self, node_context.id, node_context.text, node_context.attrs, node_context.data);
+			if (how) {
+				if (how.before) $(how.before).before($node);
+				else if (how.after) $(how.after).after($node);
+				else if (how.append) $(how.append).children('ul').eq(0).append($node);
+				else if (how.prepend) $(how.prepend).children('ul').eq(0).prepend($node);
 			}
 			
 			// Note: node-inserted is triggered in extendNode (via extendNodeList)
 			
-			return node_el;
+			return $node;
 		}
 	};
 	var insertRecursive = function (widget, node_contexts, how, originalEvent, _dontExtend) {
@@ -638,11 +674,11 @@
 		var self = widget/*, o = widget.options*/;
 		
 		$.each(node_contexts, function (i, node_context) {
-			var node_el = insertNode(self, node_context, how, originalEvent);
-			if (node_el && node_context.children) 
-				insertRecursive(self, node_context.children, { append: node_el }, originalEvent, true);
+			var $node = insertNode(self, node_context, how, originalEvent);
+			if ($node && node_context.children) 
+				insertRecursive(self, node_context.children, { append: $node }, originalEvent, true);
 			if (!_dontExtend) {
-				extendNodeList(self, $(node_el).parents('li:eq(0)'), $(node_el).parents('ul:eq(0)'), originalEvent);
+				extendNodeList(self, $node.parents('li:eq(0)'), $node.parents('ul:eq(0)'), originalEvent);
 			}
 		});
 	};
@@ -651,14 +687,15 @@
 		var self = widget, o = widget.options;
 		
 		$(nodes).each( function () {
-			var $node = $(this);
+			var nodeElement = this,
+				$node = $(nodeElement);
 			
 			var request = $.extend({}, o.ajaxRequestParams);
 			$.each(request, function (key, template) {
 				var value = template;
 				$.each([ 'id', 'text', 'title' ], function (i, k) {
 					var re = new RegExp('#\\{'+k+'\\}', 'g'), 
-						v = nodeAttr(self, $node, k);
+						v = nodeAttr(self, nodeElement, k);
 					value = value.replace(re, v || '');
 				});
 				request[key] = value;
@@ -859,9 +896,11 @@
 			///	</para>
 			/// </returns>
 			
-			var self = this;
+			var self = this,
+				$node = $(node).eq(0),
+				nodeElement = $node[0];
 			
-			if (!belongsTo(node, self.element[0])) { 
+			if (!nodeElement || !belongsTo(nodeElement, self.element[0])) { 
 				// don't set data on nodes from other tree
 				return (set ? this : (typeof ret == 'undefined' ? null : ret));
 			}
@@ -869,9 +908,9 @@
 			var set = (typeof data != 'undefined'),
 				ret = (set 
 						? (data === null 
-							? $(node).removeData('ui-tree-node-data') 
-							: $(node).data('ui-tree-node-data', data)) 
-						: $(node).data('ui-tree-node-data'));
+							? $node.removeData('ui-tree-node-data') 
+							: $node.data('ui-tree-node-data', data)) 
+						: $node.data('ui-tree-node-data'));
 			
 			return (set ? this : (typeof ret == 'undefined' ? null : ret));
 		},
@@ -910,25 +949,32 @@
 			///	</para>
 			/// </returns>
 			
-			var self = this, o = this.options;
-			var set = (typeof attrValue != 'undefined'), 
+			var self = this, o = this.options,
+				set = (typeof attrValue != 'undefined'), 
+				$node = $(node),
+				nodeElement = $node[0],
 				ret;
-				
+			
+			if (typeof nodeElement == 'undefined') {
+				var error = new Error("ui-tree.nodeAttr: 'node' argument must be HTMLElement");
+						//("ui-tree.nodeAttr: Параметр node должен быть типа HTMLElement");
+				if (this.options.throwExceptions) throw error; else { logError(error); return (set ? this : ret); }
+			}
 			if (typeof attrName != 'string') {
 				var error = new Error("ui-tree.nodeAttr: 'attrName' argument must be String");
 						//("ui-tree.nodeAttr: Параметр attrName должен быть типа String");
-				if (this.options.throwExceptions) throw error; else { logError(error); return (set ? self.element : ret); }
+				if (this.options.throwExceptions) throw error; else { logError(error); return (set ? this : ret); }
 			}
 			
 			attrName = $.trim('' + attrName).toLowerCase();
 			
-			if (!belongsTo(node, self.element[0])) { 
+			if (!belongsTo(nodeElement, self.element[0])) { 
 				// don't set attributes on nodes from other tree
 				return (set ? this : (typeof ret == 'undefined' ? null : ret));
 			}
 			if (!/^(id|text|rel|href|target|title|disabledTitle|cache|hascached|remote|collapsed|expanded|enabled|disabled|selected|error)$/.test(attrName)) {
 				// not predefined attributes
-				ret = nodeAttr(self, node, attrName, attrValue);
+				ret = nodeAttr(self, nodeElement, attrName, attrValue);
 				return (set ? this : (typeof ret == 'undefined' ? null : ret));
 			}
 			
@@ -952,48 +998,48 @@
 			
 			switch (attrName) {
 				case 'collapsed': {
-					ret = !!($(node).hasClass(uiTreeClasses.nodeCollapsed));
+					ret = !!($node.hasClass(uiTreeClasses.nodeCollapsed));
 					if (set) {
 						if (attrValue)
-							self.collapseNode(node);
+							self.collapseNode($node);
 						else if (attrValue === false)
-							self.expandNode(node);
+							self.expandNode($node);
 					}
 				} break;
 				case 'expanded': {
-					ret = !($(node).hasClass(uiTreeClasses.nodeCollapsed));
+					ret = !($node.hasClass(uiTreeClasses.nodeCollapsed));
 					if (set) {
 						if (attrValue)
-							self.expandNode(node);
+							self.expandNode($node);
 						else if (attrValue === false)
-							self.collapseNode(node);
+							self.collapseNode($node);
 					}
 				} break;
 				case 'disabled': {
-					ret = !!($(node).hasClass(uiTreeClasses.nodeDisabled));
+					ret = !!($node.hasClass(uiTreeClasses.nodeDisabled));
 					if (set) {
 						if (attrValue)
-							self.disableNode(node);
+							self.disableNode($node);
 						else if (attrValue === false)
-							self.enableNode(node);
+							self.enableNode($node);
 					}
 				} break;
 				case 'enabled': {
-					ret = !($(node).hasClass(uiTreeClasses.nodeDisabled));
+					ret = !($node.hasClass(uiTreeClasses.nodeDisabled));
 					if (set) {
 						if (attrValue)
-							self.enableNode(node);
+							self.enableNode($node);
 						else if (attrValue === false)
-							self.disableNode(node);
+							self.disableNode($node);
 					}
 				} break;
 				case 'selected': {
-					ret = !!($(node).hasClass(uiTreeClasses.nodeSelected));
+					ret = !!($node.hasClass(uiTreeClasses.nodeSelected));
 					if (set) {
 						if (attrValue)
-							self.selectNode(node, o.selectMultiple);
+							self.selectNode($node, o.selectMultiple);
 						else if (attrValue === false)
-							self.deselectNode(node);
+							self.deselectNode($node);
 					}
 				} break;
 				case 'cache':
@@ -1001,15 +1047,15 @@
 				case 'remote': {
 					ret = (set 
 							? attrValue 
-								? nodeAttrSetTrue(self, node,  attrName) 
-								: nodeAttrSetFalse(self, node, attrName)
-							: nodeAttrIsTrue(self, node, attrName));
+								? nodeAttrSetTrue(self, nodeElement,  attrName) 
+								: nodeAttrSetFalse(self, nodeElement, attrName)
+							: nodeAttrIsTrue(self, nodeElement, attrName));
 							
 					if (set) {
 						if (attrName == 'remote' && attrValue) {
-							if (!nodeAttrIsTrue(self, node, 'hascached')) {
-								nodeAttrRemove(self, node, 'error');
-								getHeaderAndNode(node)
+							if (!nodeAttrIsTrue(self, nodeElement, 'hascached')) {
+								nodeAttrRemove(self, nodeElement, 'error');
+								getHeaderAndNode($node)
 									.removeClass(uiTreeClasses.nodeError)
 									.removeClass(uiTreeClasses.nodeEmpty)
 									.addClass(uiTreeClasses.nodeCollapsed);
@@ -1018,18 +1064,18 @@
 					}
 				} break;
 				case 'id':
-					ret = nodeAttr(self, node, attrName, (set ? attrValue : undefined));
+					ret = nodeAttr(self, nodeElement, attrName, (set ? attrValue : undefined));
 					
 					if (set) {
-						node.attr('id', getNodeHtmlId(self, attrValue));
-						getHeader(node).attr('id', getNodeHeaderHtmlId(self, attrValue));
+						$node.attr('id', getNodeHtmlId(self, attrValue));
+						getHeader($node).attr('id', getNodeHeaderHtmlId(self, attrValue));
 					}
 					break;
 				case 'text':
-					ret = nodeAttr(self, node, attrName, (set ? attrValue : undefined));
+					ret = nodeAttr(self, nodeElement, attrName, (set ? attrValue : undefined));
 					
 					if (set) {
-						getHeader(node).find('.'+uiTreeClasses.nodeText).html(attrValue);
+						getHeader($node).find('.'+uiTreeClasses.nodeText).html(attrValue);
 					}
 					break;
 				case 'title':
@@ -1038,22 +1084,22 @@
 				case 'rel':
 				case 'href':
 				case 'target': {
-					ret = nodeAttr(self, node, attrName, (set ? attrValue : undefined));
+					ret = nodeAttr(self, nodeElement, attrName, (set ? attrValue : undefined));
 					
 					if (set) {
 						if (attrName == 'error') {
 							if (attrValue)
-								$(node).addClass(uiTreeClasses.nodeError);
+								$node.addClass(uiTreeClasses.nodeError);
 							else
-								$(node).removeClass(uiTreeClasses.nodeError);
+								$node.removeClass(uiTreeClasses.nodeError);
 						}
 						if (attrName == 'href' || attrName == 'rel' || attrName == 'target') {
-							var $anchor = getHeader(node).find('a:eq(0)');
+							var $anchor = getAnchor($node);
 							$anchor.attr(attrName, attrValue);
 						}
 					}
 					
-					updateTitle(self, node);
+					updateTitle(self, $node);
 				} break;
 			} // switch attrName
 			
@@ -1080,29 +1126,31 @@
 			/// Если информация о дочерних узлах не собиралась, children == null, иначе - массив описаний узлов.</para>
 			/// </returns>
 			
-			var self = this, o = this.options;
-			var $node = $(node).eq(0);
-			var context = { 
-				id: self.nodeAttr($node, 'id'), 
-				text: getHeader($node).find('.'+uiTreeClasses.nodeText).html(), 
-				children: (recursive ? [ ] : null), 
-				attrs: { 
-					rel: getHeader($node).find('a:eq(0)').attr('rel'),  //self.nodeAttr($node, 'rel'), 
-					href: getHeader($node).find('a:eq(0)').attr('href'),  //self.nodeAttr($node, 'href'), 
-					target: getHeader($node).find('a:eq(0)').attr('target'),  //self.nodeAttr($node, 'target'), 
-					title: self.nodeAttr($node, 'title'), 
-					disabledTitle: self.nodeAttr($node, 'disabledTitle'),
-					remote: self.nodeAttr($node, 'remote'), 
-					cache: self.nodeAttr($node, 'cache'), 
-					hascached: self.nodeAttr($node, 'hascached'),
-					collapsed: self.nodeAttr($node, 'collapsed'), 
-					disabled: self.nodeAttr($node, 'disabled'), 
-					selected: self.nodeAttr($node, 'selected'),
-					loading: $node.hasClass(uiTreeClasses.nodeLoading),
-					error: self.nodeAttr($node, 'error')
-				},
-				data: self.nodeData($node)
-			};
+			var self = this, o = this.options,
+				$node = $(node).eq(0),
+				$header = getHeader($node),
+				$anchor = getAnchor($node, $header),
+				context = { 
+					id: self.nodeAttr($node, 'id'), 
+					text: $header.find('.'+uiTreeClasses.nodeText).html(), 
+					children: (recursive ? [ ] : null), 
+					attrs: { 
+						rel: $anchor.attr('rel'),  //self.nodeAttr($node, 'rel'), 
+						href: $anchor.attr('href'),  //self.nodeAttr($node, 'href'), 
+						target: $anchor.attr('target'),  //self.nodeAttr($node, 'target'), 
+						title: self.nodeAttr($node, 'title'), 
+						disabledTitle: self.nodeAttr($node, 'disabledTitle'),
+						remote: self.nodeAttr($node, 'remote'), 
+						cache: self.nodeAttr($node, 'cache'), 
+						hascached: self.nodeAttr($node, 'hascached'),
+						collapsed: self.nodeAttr($node, 'collapsed'), 
+						disabled: self.nodeAttr($node, 'disabled'), 
+						selected: self.nodeAttr($node, 'selected'),
+						loading: $node.hasClass(uiTreeClasses.nodeLoading),
+						error: self.nodeAttr($node, 'error')
+					},
+					data: self.nodeData($node)
+				};
 			
 			if (recursive) {
 				getChildren($node).each(function () {
@@ -1203,10 +1251,11 @@
 			//	originalEvent.ui_tree[originalEvent.ui_tree.length] = { method: 'setChildNodes', args: $.makeArray(arguments) };
 			//}
 			
-			var self = this, o = this.options;
-			var $node = (node ? $(node) : null);
+			var self = this, o = this.options,
+				$node = (node ? $(node) : null),
+				nodeElement,
+				$list;
 			
-			var $list;
 			if ($node && $node.length > 0) {
 				$node = $node.eq(0);
 				$list = $node.find('ul:eq(0)');
@@ -1217,6 +1266,8 @@
 			}
 			
 			if ($node.length <= 0) return;
+			
+			nodeElement = $node[0];
 			
 			cancelLoadChildNodes(self, $node, originalEvent);
 			
@@ -1233,23 +1284,23 @@
 			
 			insertRecursive(self, children_contexts, { append: $node }, originalEvent);
 			
-			nodeAttrSetTrue(self, $node, 'hascached');
+			nodeAttrSetTrue(self, nodeElement, 'hascached');
 			
 			handleNodeLoadSuccess(self, $node, 
 				(_from_ajax ? _from_ajax.ajaxOptions : null), 
 				(_from_ajax ? _from_ajax.httpRequest : null),
 				originalEvent);
 			
-			if (nodeAttrIsTrue(self, $node, 'collapsed')) {
+			if (nodeAttrIsTrue(self, nodeElement, 'collapsed')) {
 				self.collapseNode($node, originalEvent);
 			}
 			else {
-				//nodeAttrRemove(self, $node, 'collapsed');
+				//nodeAttrRemove(self, nodeElement, 'collapsed');
 				self.expandNode($node, originalEvent);
 			}
 			
-			if (!nodeAttrIsTrue(self, $node, 'cache')) {
-				nodeAttrRemove(self, $node, 'hascached'); // remove caching if not going to use it further
+			if (!nodeAttrIsTrue(self, nodeElement, 'cache')) {
+				nodeAttrRemove(self, nodeElement, 'hascached'); // remove caching if not going to use it further
 			}
 		},
 		
@@ -1341,8 +1392,9 @@
 
 			if (relative_depth > 0) {
 				$(nodes).each(function () {
-					var $node = $(this);
-					expandRecursive(self, $node, (getDepth($node, self.element) + relative_depth), originalEvent);
+					var nodeElement = this,
+						$node = $(nodeElement);
+					expandRecursive(self, $node, (getDepth(nodeElement, self.element[0]) + relative_depth), originalEvent);
 				});
 			}
 		},
@@ -1354,7 +1406,8 @@
 			//}
 			
 			$(nodes).each(function () {
-				var $node = $(this);
+				var nodeElement = this,
+					$node = $(nodeElement);
 				
 				if ($node.hasClass(uiTreeClasses.nodeDisabled))
 					return;
@@ -1365,10 +1418,10 @@
 				if (notify && false === self._trigger('node-before-collapse', originalEvent, createNodeEventArgs(self, $node)))
 					return;
 				
-				if (!nodeAttrIsTrue(self, $node, 'cache')) {
-					nodeAttrSetFalse(self, $node, 'hascached'); // remove hascached flag to force reload child nodes on next expand
+				if (!nodeAttrIsTrue(self, nodeElement, 'cache')) {
+					nodeAttrSetFalse(self, nodeElement, 'hascached'); //< remove hascached flag to force reload child nodes on next expand
 				}
-				nodeAttrSetTrue(self, $node, 'collapsed');
+				nodeAttrSetTrue(self, nodeElement, 'collapsed');
 				
 				getHeaderAndNode($node)
 					.addClass(uiTreeClasses.nodeCollapsed);
